@@ -1,0 +1,556 @@
+{% extends 'base.html' %}
+
+{% block title %}Resume Detail - {{ resume.target_company }} - Resume Tailoring System{% endblock %}
+
+{% block extra_css %}
+{% load static %}
+<style>
+    @font-face {
+        font-family: 'Rubik';
+        font-style: normal;
+        font-weight: 400;
+        src: url('{% static "fonts/Rubik-Regular.ttf" %}') format('truetype');
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'Rubik';
+        font-style: normal;
+        font-weight: 500;
+        src: url('{% static "fonts/Rubik-Medium.ttf" %}') format('truetype');
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'Rubik';
+        font-style: normal;
+        font-weight: 600;
+        src: url('{% static "fonts/Rubik-Medium.ttf" %}') format('truetype');
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'Rubik';
+        font-style: normal;
+        font-weight: 700;
+        src: url('{% static "fonts/Rubik-Bold.ttf" %}') format('truetype');
+        font-display: swap;
+    }
+</style>
+<style>
+    :root {
+        --theme: #CA3832;
+    }
+
+    /* Resume preview (web) */
+    .resume-preview {
+        background-color: white;
+        color: black;
+        text-align: justify;
+        hyphens: auto;
+        font-family: "Rubik", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.4;
+    }
+
+    .resume-preview p,
+    .resume-preview li,
+    .resume-preview dl {
+        margin: 0;
+    }
+
+    /* Paragraph spacing requirement */
+    .resume-preview p {
+        margin-bottom: 4px;
+        margin-top: 0;
+    }
+
+    /* Headings */
+    .resume-preview h1,
+    .resume-preview h2,
+    .resume-preview h3 {
+        font-weight: bold;
+    }
+
+    .resume-preview h1 {
+        font-size: 1.67em;
+        line-height: 1;
+        margin-bottom: 8px;
+        text-align: left;
+        color: var(--theme);
+    }
+
+    .resume-preview h2 {
+        color: var(--theme);
+        font-size: 1.25em;
+        margin-top: 12px;
+        margin-bottom: 8px;
+        border-bottom-style: solid;
+        border-bottom-width: 1px;
+        border-bottom-color: var(--theme);
+        padding-bottom: 4px;
+    }
+
+    .resume-preview h3 {
+        color: var(--theme);
+        font-size: 1.08em;
+        margin-top: 4px;
+        margin-bottom: 6px;
+    }
+
+    /* Keep header details clean (not themed) */
+    .resume-preview h1 + p {
+        color: var(--theme);
+        font-weight: 600;
+        margin-bottom: 8px;
+        line-height: 1.2;
+    }
+
+    /* Tighten spacing for contact info lines (email, phone, location) */
+    .resume-preview p em {
+        line-height: 1.1;
+    }
+
+    /* Lists */
+    .resume-preview ul,
+    .resume-preview ol {
+        /* tighter bullet indentation */
+        padding-left: 1.1em;
+        margin-left: 0;
+        margin: 0.2em 0 0 0;
+    }
+
+    .resume-preview ul {
+        list-style-type: circle;
+    }
+
+    .resume-preview ol {
+        list-style-type: decimal;
+    }
+
+    /* Definition lists */
+    .resume-preview dl {
+        display: flex;
+        gap: 10px;
+    }
+
+    .resume-preview dl dt,
+    .resume-preview dl dd:not(:last-child) {
+        flex: 1;
+    }
+
+    /* Links */
+    .resume-preview a {
+        color: var(--theme);
+        text-decoration: underline;
+    }
+    
+    /* Hide horizontal rules (---) */
+    .resume-preview hr {
+        display: none;
+    }
+
+    /* Salary/compensation highlighting */
+    .salary-highlight {
+        background-color: yellow;
+        padding: 1px 2px;
+        border-radius: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'resume_history' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to History
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Resume Information -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-text"></i> {{ resume.target_company }} - {{ resume.job_title }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong><i class="bi bi-person"></i> Profile Name:</strong><br>{{ resume.profile_name }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="bi bi-calendar"></i> Created:</strong><br>{{ resume.created_at|date:"F d, Y \a\t h:i A" }}</p>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong><i class="bi bi-building"></i> Company:</strong><br>{{ resume.target_company }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong><i class="bi bi-briefcase"></i> Job Title:</strong><br>{{ resume.job_title }}</p>
+                    </div>
+                </div>
+                {% if resume.job_url %}
+                <div class="mb-3">
+                    <p><strong><i class="bi bi-link-45deg"></i> Job URL:</strong><br>
+                        <a href="{{ resume.job_url }}" target="_blank">{{ resume.job_url }}</a>
+                    </p>
+                </div>
+                {% endif %}
+                <div class="mb-3">
+                    <p><strong><i class="bi bi-file-text"></i> Status:</strong>
+                        <span class="badge {% if resume.status == 'completed' %}bg-success{% elif resume.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ resume.get_status_display }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Description -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Job Description</h5>
+            </div>
+            <div class="card-body">
+                <div class="resume-preview">
+                    {{ job_description_html|safe }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Initial Resume -->
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark"></i> Initial Resume</h5>
+            </div>
+            <div class="card-body">
+                <div class="resume-preview">
+                    {{ initial_resume_html|safe }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tailored Resume -->
+        {% if resume.is_completed %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-check"></i> Tailored Resume</h5>
+            </div>
+            <div class="card-body">
+                <div class="resume-preview">
+                    {{ tailored_resume_html|safe }}
+                </div>
+            </div>
+        </div>
+        {% elif resume.is_failed %}
+        <div class="alert alert-danger">
+            <h5><i class="bi bi-exclamation-triangle"></i> Generation Failed</h5>
+            <p>{{ resume.error_message }}</p>
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            <i class="bi bi-hourglass-split"></i> Resume generation is still pending...
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Actions Card -->
+        <div class="card shadow sticky-top" style="top: 20px;">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Actions</h5>
+            </div>
+            <div class="card-body">
+                {% if resume.is_completed %}
+                <form method="POST" class="d-grid gap-2 mb-2" id="downloadForm">
+                    {% csrf_token %}
+                    <button type="submit" name="download" class="btn btn-primary" id="downloadButton">
+                        <i class="bi bi-download"></i> Download PDF
+                    </button>
+                </form>
+                
+                <form method="POST" class="d-grid gap-2 mb-2" id="coverLetterForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="cover_letter_form">
+                    <button type="submit" name="generate_cover_letter" value="1" class="btn btn-success" id="coverLetterButton">
+                        <i class="bi bi-file-text"></i> Generate Cover Letter
+                    </button>
+                </form>
+                <form method="POST" class="d-grid gap-2">
+                    {% csrf_token %}
+                    <button type="submit" name="regenerate" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-repeat"></i> Regenerate with AI
+                    </button>
+                </form>
+                <hr>
+                <p class="small text-muted mb-0">
+                    <i class="bi bi-info-circle"></i> <strong>Download PDF:</strong> Generates a professionally formatted PDF from the existing text.<br>
+                    <i class="bi bi-info-circle"></i> <strong>Regenerate:</strong> Calls OpenAI again to create a new version.
+                </p>
+                {% elif resume.is_failed %}
+                <form method="POST" class="d-grid gap-2">
+                    {% csrf_token %}
+                    <button type="submit" name="regenerate" class="btn btn-warning">
+                        <i class="bi bi-arrow-repeat"></i> Retry Generation
+                    </button>
+                </form>
+                {% else %}
+                <p class="text-muted">Resume is being processed...</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Question Answering Card -->
+        {% if resume.is_completed %}
+        <div class="card shadow mt-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-question-circle"></i> Interview Question Helper</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="questionForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="question_form">
+                    <div class="mb-3">
+                        <label for="question" class="form-label">Recruiter Question:</label>
+                        <textarea class="form-control" id="question" name="question" rows="3" 
+                                placeholder="e.g., Tell me about your experience with microservices...">{{ stored_question|default:"" }}</textarea>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex">
+                        <button type="submit" name="generate_answer" value="1" class="btn btn-info flex-md-fill" id="generateAnswerButton">
+                            <i class="bi bi-magic"></i> Generate Answer
+                        </button>
+                        {% if stored_question %}
+                        <button type="submit" name="clear_answer" value="1" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+                
+                {% if question_answer_html %}
+                <div class="mt-3">
+                    <h6 class="d-flex align-items-center justify-content-between gap-2">
+                        <span><i class="bi bi-chat-quote"></i> Generated Answer:</span>
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            id="copyGeneratedAnswerBtn"
+                            data-copy-target="#generatedAnswerContent"
+                            aria-label="Copy generated answer to clipboard"
+                        >
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                    </h6>
+                    <div class="alert alert-light border">
+                        <div class="markdown-content" id="generatedAnswerContent">
+                            {{ question_answer_html|safe }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Metadata Card -->
+        <div class="card shadow mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Metadata</h6>
+            </div>
+            <div class="card-body">
+                <p class="small mb-2"><strong>Created:</strong><br>{{ resume.created_at|date:"F d, Y h:i A" }}</p>
+                <p class="small mb-2"><strong>Last Updated:</strong><br>{{ resume.updated_at|date:"F d, Y h:i A" }}</p>
+                <p class="small mb-0"><strong>Resume ID:</strong><br>{{ resume.id }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add loading state to download button
+    const downloadForm = document.getElementById('downloadForm');
+    if (downloadForm) {
+        downloadForm.addEventListener('submit', function() {
+            const button = document.getElementById('downloadButton');
+            if (button) {
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating PDF...';
+                button.disabled = true;
+                
+                // Reset after 5 seconds (PDF generation from existing text is fast)
+                setTimeout(function() {
+                    button.innerHTML = '<i class="bi bi-download"></i> Download PDF';
+                    button.disabled = false;
+                }, 5000);
+            }
+        });
+    }
+    
+    // Add loading state to regenerate button
+    const regenerateForms = document.querySelectorAll('form button[name="regenerate"]');
+    regenerateForms.forEach(function(button) {
+        button.form.addEventListener('submit', function(e) {
+            if (e.submitter && e.submitter.name === 'regenerate') {
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Regenerating with AI...';
+                button.disabled = true;
+            }
+        });
+    });
+    
+    // Add loading state to question answer button
+    const questionForm = document.getElementById('questionForm');
+    if (questionForm) {
+        questionForm.addEventListener('submit', function(e) {
+            const button = document.getElementById('generateAnswerButton');
+            if (button && e.submitter && e.submitter.name === 'generate_answer') {
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating Answer...';
+                button.disabled = true;
+            }
+        });
+    }
+    
+    // Add loading state to cover letter button
+    const coverLetterForm = document.getElementById('coverLetterForm');
+    if (coverLetterForm) {
+        coverLetterForm.addEventListener('submit', function() {
+            const button = document.getElementById('coverLetterButton');
+            if (button) {
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating Cover Letter...';
+                button.disabled = true;
+                
+                // Reset after 30 seconds (cover letter generation might take longer)
+                setTimeout(function() {
+                    button.innerHTML = '<i class="bi bi-file-text"></i> Generate Cover Letter';
+                    button.disabled = false;
+                }, 30000);
+            }
+        });
+    }
+
+    // Copy generated answer to clipboard
+    async function copyTextToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+
+        // Fallback for insecure contexts/older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-1000px';
+        textarea.style.left = '-1000px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!ok) {
+            throw new Error('Copy command was rejected');
+        }
+    }
+
+    const copyGeneratedAnswerBtn = document.getElementById('copyGeneratedAnswerBtn');
+    if (copyGeneratedAnswerBtn) {
+        copyGeneratedAnswerBtn.addEventListener('click', async function() {
+            const targetSelector = copyGeneratedAnswerBtn.getAttribute('data-copy-target');
+            const targetEl = targetSelector ? document.querySelector(targetSelector) : null;
+            const textToCopy = targetEl ? (targetEl.innerText || targetEl.textContent || '').trim() : '';
+            if (!textToCopy) return;
+
+            const originalHtml = copyGeneratedAnswerBtn.innerHTML;
+            copyGeneratedAnswerBtn.disabled = true;
+            try {
+                await copyTextToClipboard(textToCopy);
+                copyGeneratedAnswerBtn.innerHTML = '<i class="bi bi-check2"></i> Copied';
+            } catch (e) {
+                copyGeneratedAnswerBtn.innerHTML = '<i class="bi bi-x-circle"></i> Failed';
+            } finally {
+                setTimeout(function() {
+                    copyGeneratedAnswerBtn.innerHTML = originalHtml;
+                    copyGeneratedAnswerBtn.disabled = false;
+                }, 1500);
+            }
+        });
+    }
+
+    // Highlight salary-related words in job description
+    function highlightSalaryWords() {
+        // Find the job description section
+        const jobDescriptionCards = document.querySelectorAll('.card');
+        let jobDescriptionCard = null;
+        
+        // Find the card with "Job Description" header
+        for (let card of jobDescriptionCards) {
+            const header = card.querySelector('.card-header');
+            if (header && header.textContent.includes('Job Description')) {
+                jobDescriptionCard = card;
+                break;
+            }
+        }
+        
+        if (!jobDescriptionCard) return;
+        
+        const jobDescriptionContent = jobDescriptionCard.querySelector('.card-body .resume-preview');
+        if (!jobDescriptionContent) return;
+        
+        // Words to highlight (case insensitive)
+        const wordsToHighlight = ['pay', 'compensation', 'salary'];
+        
+        // Function to highlight words in text nodes
+        function highlightInTextNode(textNode) {
+            let text = textNode.textContent;
+            let hasMatch = false;
+            
+            // Create regex pattern for all words (case insensitive, word boundaries)
+            const pattern = new RegExp(`\\b(${wordsToHighlight.join('|')})\\b`, 'gi');
+            
+            if (pattern.test(text)) {
+                hasMatch = true;
+                // Reset regex lastIndex
+                pattern.lastIndex = 0;
+                
+                // Replace matches with highlighted spans
+                const highlightedText = text.replace(pattern, '<span class="salary-highlight">$1</span>');
+                
+                // Create a temporary container to hold the new HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = highlightedText;
+                
+                // Replace the text node with the new content
+                const parent = textNode.parentNode;
+                while (tempDiv.firstChild) {
+                    parent.insertBefore(tempDiv.firstChild, textNode);
+                }
+                parent.removeChild(textNode);
+            }
+            
+            return hasMatch;
+        }
+        
+        // Function to walk through all text nodes
+        function walkTextNodes(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                highlightInTextNode(node);
+            } else {
+                // Skip already highlighted elements
+                if (node.classList && node.classList.contains('salary-highlight')) {
+                    return;
+                }
+                
+                // Process child nodes (use slice to avoid live NodeList issues)
+                const children = Array.from(node.childNodes);
+                children.forEach(child => walkTextNodes(child));
+            }
+        }
+        
+        // Apply highlighting
+        walkTextNodes(jobDescriptionContent);
+    }
+    
+    // Run highlighting when page loads
+    document.addEventListener('DOMContentLoaded', highlightSalaryWords);
+</script>
+{% endblock %}

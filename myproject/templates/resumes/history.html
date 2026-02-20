@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block title %}Resume History - Resume Tailoring System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clock-history"></i> Resume History</h2>
+    <a href="{% url 'dashboard' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Create New Resume
+    </a>
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-8">
+                {{ search_form.search }}
+            </div>
+            <div class="col-md-3">
+                {{ search_form.status }}
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results Count -->
+<p class="text-muted">
+    Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ total_count }} resume(s)
+</p>
+
+<!-- Resume List -->
+{% if page_obj %}
+<div class="row">
+    {% for resume in page_obj %}
+    <div class="col-md-6 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">{{ resume.target_company }}</h5>
+                    <span class="badge {% if resume.status == 'completed' %}bg-success{% elif resume.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                        {{ resume.get_status_display }}
+                    </span>
+                </div>
+                <h6 class="card-subtitle mb-2 text-muted">{{ resume.job_title }}</h6>
+                <p class="card-text">
+                    <small class="text-muted">
+                        <i class="bi bi-person"></i> {{ resume.profile_name }}<br>
+                        <i class="bi bi-calendar"></i> {{ resume.created_at|date:"M d, Y" }}<br>
+                        {% if resume.job_url %}
+                        <i class="bi bi-link-45deg"></i> <a href="{{ resume.job_url }}" target="_blank">Job Link</a>
+                        {% endif %}
+                    </small>
+                </p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{% url 'resume_detail' resume.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye"></i> View Details
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">First</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+        </li>
+        {% endif %}
+
+        <li class="page-item active">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+        </li>
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Last</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="alert alert-info text-center" role="alert">
+    <i class="bi bi-info-circle"></i> No resumes found. <a href="{% url 'dashboard' %}" class="alert-link">Create your first resume!</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile Settings - Resume Tailoring System{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-gear"></i> Profile Settings</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Account Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Account Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ u_form.username.id_for_label }}" class="form-label">Username</label>
+                        {{ u_form.username }}
+                        {% if u_form.username.errors %}
+                            <div class="text-danger">{{ u_form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ u_form.email.id_for_label }}" class="form-label">Email</label>
+                        {{ u_form.email }}
+                        {% if u_form.email.errors %}
+                            <div class="text-danger">{{ u_form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ u_form.first_name.id_for_label }}" class="form-label">First Name</label>
+                            {{ u_form.first_name }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ u_form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                            {{ u_form.last_name }}
+                        </div>
+                    </div>
+                    <button type="submit" name="update_profile" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Update Profile
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Default Resume Settings -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Default Resume Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ p_form.default_name.id_for_label }}" class="form-label">{{ p_form.default_name.label }}</label>
+                        {{ p_form.default_name }}
+                        {% if p_form.default_name.errors %}
+                            <div class="text-danger">{{ p_form.default_name.errors }}</div>
+                        {% endif %}
+                        {% if p_form.default_name.help_text %}
+                            <small class="form-text text-muted">{{ p_form.default_name.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ p_form.default_base_resume.id_for_label }}" class="form-label">{{ p_form.default_base_resume.label }}</label>
+                        {{ p_form.default_base_resume }}
+                        {% if p_form.default_base_resume.errors %}
+                            <div class="text-danger">{{ p_form.default_base_resume.errors }}</div>
+                        {% endif %}
+                        {% if p_form.default_base_resume.help_text %}
+                            <small class="form-text text-muted">{{ p_form.default_base_resume.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    <button type="submit" name="update_defaults" class="btn btn-success">
+                        <i class="bi bi-save"></i> Save Default Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning">
+                <h5 class="mb-0">Change Password</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ pwd_form.old_password.id_for_label }}" class="form-label">Current Password</label>
+                        {{ pwd_form.old_password }}
+                        {% if pwd_form.old_password.errors %}
+                            <div class="text-danger">{{ pwd_form.old_password.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ pwd_form.new_password1.id_for_label }}" class="form-label">New Password</label>
+                        {{ pwd_form.new_password1 }}
+                        {% if pwd_form.new_password1.errors %}
+                            <div class="text-danger">{{ pwd_form.new_password1.errors }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">{{ pwd_form.new_password1.help_text }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ pwd_form.new_password2.id_for_label }}" class="form-label">Confirm New Password</label>
+                        {{ pwd_form.new_password2 }}
+                        {% if pwd_form.new_password2.errors %}
+                            <div class="text-danger">{{ pwd_form.new_password2.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" name="change_password" class="btn btn-warning">
+                        <i class="bi bi-key"></i> Change Password
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Account Stats -->
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Account Stats</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Username:</strong> {{ user.username }}</p>
+                <p><strong>Email:</strong> {{ user.email }}</p>
+                <p><strong>Date Joined:</strong> {{ user.date_joined|date:"M d, Y" }}</p>
+                <p><strong>Total Resumes:</strong> {{ user.resumes.count }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

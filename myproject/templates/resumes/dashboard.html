@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Resume Tailoring System{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-file-text"></i> Build Tailored Resume</h2>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-body">
+                <form method="POST" id="resumeForm">
+                    {% csrf_token %}
+                    
+                    <!-- Profile Section -->
+                    <h5 class="border-bottom pb-2 mb-3">Your Profile</h5>
+                    <div class="mb-3">
+                        <label for="{{ form.profile_name.id_for_label }}" class="form-label">{{ form.profile_name.label }}</label>
+                        {{ form.profile_name }}
+                        {% if form.profile_name.errors %}
+                            <div class="text-danger">{{ form.profile_name.errors }}</div>
+                        {% endif %}
+                        {% if lock_profile_name %}
+                            <div class="form-text text-muted">Loaded from your Settings (disabled on dashboard).</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Job Details Section -->
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">Job Details</h5>
+                    <div class="mb-3">
+                        <label for="{{ form.target_company.id_for_label }}" class="form-label">{{ form.target_company.label }}</label>
+                        {{ form.target_company }}
+                        {% if form.target_company.errors %}
+                            <div class="text-danger">{{ form.target_company.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.job_title.id_for_label }}" class="form-label">{{ form.job_title.label }}</label>
+                        {{ form.job_title }}
+                        {% if form.job_title.errors %}
+                            <div class="text-danger">{{ form.job_title.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.job_url.id_for_label }}" class="form-label">{{ form.job_url.label }} <small class="text-muted">(Optional)</small></label>
+                        {{ form.job_url }}
+                        {% if form.job_url.errors %}
+                            <div class="text-danger">{{ form.job_url.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.job_description.id_for_label }}" class="form-label">{{ form.job_description.label }}</label>
+                        {{ form.job_description }}
+                        {% if form.job_description.errors %}
+                            <div class="text-danger">{{ form.job_description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Base Resume Section -->
+                    <h5 class="border-bottom pb-2 mb-3 mt-4">Your Base Resume</h5>
+                    <div class="mb-3">
+                        <label for="{{ form.initial_resume_text.id_for_label }}" class="form-label">{{ form.initial_resume_text.label }}</label>
+                        {{ form.initial_resume_text }}
+                        {% if form.initial_resume_text.errors %}
+                            <div class="text-danger">{{ form.initial_resume_text.errors }}</div>
+                        {% endif %}
+                        {% if lock_initial_resume_text %}
+                            <div class="form-text text-muted">Loaded from your Settings (disabled on dashboard).</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg" id="buildButton">
+                            <i class="bi bi-magic"></i> Build Tailored Resume
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Instructions Card -->
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> How it Works</h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-2">Enter your name and job details</li>
+                    <li class="mb-2">Paste the complete job description</li>
+                    <li class="mb-2">Paste your base resume</li>
+                    <li class="mb-2">Click "Build Tailored Resume"</li>
+                    <li class="mb-0">PDF download will start automatically!</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Recent Resumes -->
+        {% if recent_resumes %}
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Resumes</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for resume in recent_resumes %}
+                <a href="{% url 'resume_detail' resume.pk %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ resume.target_company }}</strong><br>
+                            <small class="text-muted">{{ resume.job_title }}</small>
+                        </div>
+                        <span class="badge {% if resume.status == 'completed' %}bg-success{% elif resume.status == 'pending' %}bg-warning{% else %}bg-danger{% endif %}">
+                            {{ resume.get_status_display }}
+                        </span>
+                    </div>
+                    <small class="text-muted">{{ resume.created_at|date:"M d, Y" }}</small>
+                </a>
+                {% endfor %}
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'resume_history' %}" class="btn btn-sm btn-outline-secondary w-100">
+                    View All History
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Disable dashboard inputs that are controlled by user defaults
+    document.addEventListener('DOMContentLoaded', function() {
+        const lockProfileName = {{ lock_profile_name|yesno:"true,false" }};
+        const lockInitialResume = {{ lock_initial_resume_text|yesno:"true,false" }};
+
+        if (lockProfileName) {
+            const el = document.getElementById('{{ form.profile_name.id_for_label }}');
+            if (el) el.disabled = true;
+        }
+
+        if (lockInitialResume) {
+            const el = document.getElementById('{{ form.initial_resume_text.id_for_label }}');
+            if (el) el.disabled = true;
+        }
+    });
+
+    document.getElementById('resumeForm').addEventListener('submit', function() {
+        const button = document.getElementById('buildButton');
+        const originalHTML = button.innerHTML;
+        
+        // Show loading state
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating Resume...';
+        button.disabled = true;
+        
+        // Reset button after download completes (or timeout after 45 seconds)
+        setTimeout(function() {
+            button.innerHTML = originalHTML;
+            button.disabled = false;
+        }, 45000);
+        
+        // Try to detect when download completes
+        let downloadCheck = setInterval(function() {
+            // When focus returns to window, download likely completed
+            if (document.hasFocus()) {
+                clearInterval(downloadCheck);
+                setTimeout(function() {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                }, 2000);
+            }
+        }, 1000);
+    });
+</script>
+{% endblock %}
