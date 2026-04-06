@@ -81,21 +81,21 @@ def dashboard(request):
                 db_save_time = time.time() - db_save_start
                 print(f"💾 [DB-SAVE] Database save completed: {db_save_time*1000:.1f}ms")
                 
-                # Generate and return PDF directly
-                pdf_start = time.time()
-                print(f"📄 [PDF-START] Generating PDF document...")
-                response = PDFGenerator.generate_resume_pdf(
+                # Generate and return DOCX directly
+                docx_start = time.time()
+                print(f"📄 [DOCX-START] Generating DOCX document...")
+                response = PDFGenerator.generate_resume_docx(
                     profile_name=resume.profile_name,
                     company_name=resume.target_company,
                     job_title=resume.job_title or 'Position',
                     tailored_resume_text=resume.tailored_resume_text
                 )
-                pdf_time = time.time() - pdf_start
-                print(f"📄 [PDF-DONE] PDF generation completed: {pdf_time:.2f}s")
+                docx_time = time.time() - docx_start
+                print(f"📄 [DOCX-DONE] DOCX generation completed: {docx_time:.2f}s")
                 
                 total_time = time.time() - total_start
                 print(f"✅ [COMPLETE] Total process time: {total_time:.2f}s")
-                print(f"📊 [BREAKDOWN] AI: {ai_total_time:.2f}s ({ai_total_time/total_time*100:.1f}%), DB: {(db_test_time+db_save_time)*1000:.1f}ms, PDF: {pdf_time:.2f}s ({pdf_time/total_time*100:.1f}%)")
+                print(f"📊 [BREAKDOWN] AI: {ai_total_time:.2f}s ({ai_total_time/total_time*100:.1f}%), DB: {(db_test_time+db_save_time)*1000:.1f}ms, DOCX: {docx_time:.2f}s ({docx_time/total_time*100:.1f}%)")
                 
                 return response
                 
@@ -188,19 +188,19 @@ def resume_detail(request, pk):
     """
     resume = get_object_or_404(Resume, pk=pk, user=request.user)
     
-    # Handle PDF download (no regeneration)
+    # Handle DOCX download (no regeneration)
     if request.method == 'POST' and 'download' in request.POST:
         if resume.status == 'completed' and resume.tailored_resume_text:
             download_start = time.time()
-            print(f"📥 [DOWNLOAD] Starting PDF download for resume ID: {resume.id}")
-            response = PDFGenerator.generate_resume_pdf(
+            print(f"📥 [DOWNLOAD] Starting DOCX download for resume ID: {resume.id}")
+            response = PDFGenerator.generate_resume_docx(
                 profile_name=resume.profile_name,
                 company_name=resume.target_company,
                 job_title=resume.job_title or 'Position',
                 tailored_resume_text=resume.tailored_resume_text
             )
             download_time = time.time() - download_start
-            print(f"📥 [DOWNLOAD] PDF download completed: {download_time:.2f}s")
+            print(f"📥 [DOWNLOAD] DOCX download completed: {download_time:.2f}s")
             return response
         else:
             print(f"❌ [DOWNLOAD] Download failed - Resume not ready. Status: {resume.status}")
@@ -233,20 +233,20 @@ def resume_detail(request, pk):
             db_time = time.time() - db_start
             print(f"💾 [REGEN-DB] Database update completed: {db_time*1000:.1f}ms")
             
-            messages.success(request, 'Resume regenerated successfully! PDF download will start automatically.')
-            
-            # Generate and return PDF
-            pdf_start = time.time()
-            print(f"📄 [REGEN-PDF] Generating PDF for regenerated resume...")
-            response = PDFGenerator.generate_resume_pdf(
+            messages.success(request, 'Resume regenerated successfully! DOCX download will start automatically.')
+
+            # Generate and return DOCX
+            docx_start = time.time()
+            print(f"📄 [REGEN-DOCX] Generating DOCX for regenerated resume...")
+            response = PDFGenerator.generate_resume_docx(
                 profile_name=resume.profile_name,
                 company_name=resume.target_company,
                 job_title=resume.job_title or 'Position',
                 tailored_resume_text=resume.tailored_resume_text
             )
-            pdf_time = time.time() - pdf_start
+            docx_time = time.time() - docx_start
             total_regen_time = time.time() - regen_start
-            print(f"📄 [REGEN-PDF] PDF generation completed: {pdf_time:.2f}s")
+            print(f"📄 [REGEN-DOCX] DOCX generation completed: {docx_time:.2f}s")
             print(f"✅ [REGEN-COMPLETE] Total regeneration time: {total_regen_time:.2f}s")
             
             return response

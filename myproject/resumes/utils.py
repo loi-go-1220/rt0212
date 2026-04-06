@@ -3,6 +3,10 @@ from django.conf import settings
 from io import BytesIO
 import markdown
 from xhtml2pdf import pisa
+from docx import Document
+from docx.shared import Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from htmldocx import HtmlToDocx
 import re
 import os
 import html
@@ -169,6 +173,82 @@ class PDFGenerator:
         
         return response
     
+    @staticmethod
+    def generate_resume_docx(profile_name, company_name, job_title, tailored_resume_text):
+        """
+        Generate a DOCX resume using python-docx and htmldocx
+        """
+        import time
+        docx_gen_start = time.time()
+
+        # Convert markdown to HTML
+        markdown_start = time.time()
+        html_content = markdown.markdown(
+            tailored_resume_text,
+            extensions=['extra'],
+            output_format='html5'
+        )
+        markdown_time = time.time() - markdown_start
+        print(f"📄 [DOCX-MD] Markdown to HTML conversion: {markdown_time*1000:.1f}ms")
+
+        # Clean up escaped HTML
+        html_content = html_content.replace('&amp;nbsp;', '&nbsp;')
+        html_content = html_content.replace('&lt;u&gt;', '<u>')
+        html_content = html_content.replace('&lt;/u&gt;', '</u>')
+        html_content = html_content.replace('&lt;br&gt;', '<br/>')
+        html_content = html_content.replace('&lt;br/&gt;', '<br/>')
+        html_content = html_content.replace('&lt;br /&gt;', '<br/>')
+
+        # Build DOCX document
+        doc = Document()
+
+        # Set narrow margins (1.27 cm ~ 720 twips)
+        from docx.shared import Cm
+        for section in doc.sections:
+            section.top_margin = Cm(1.8)
+            section.bottom_margin = Cm(1.8)
+            section.left_margin = Cm(1.6)
+            section.right_margin = Cm(1.6)
+
+        # Set default body font
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = 'Calibri'
+        font.size = Pt(11)
+
+        # Style heading levels
+        for heading_level, size in [('Heading 1', 16), ('Heading 2', 13), ('Heading 3', 11)]:
+            h_style = doc.styles[heading_level]
+            h_style.font.color.rgb = RGBColor(0, 0, 0)
+            h_style.font.size = Pt(size)
+            h_style.font.bold = True
+
+        # Parse HTML into document
+        parser = HtmlToDocx()
+        parser.add_html_to_document(html_content, doc)
+
+        docx_create_time = time.time() - docx_gen_start
+        print(f"📄 [DOCX-CREATE] Document build: {docx_create_time*1000:.1f}ms")
+
+        # Save to buffer
+        buffer = BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+        filename = f"{profile_name}_{company_name}.docx".replace(' ', '_')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        total_time = time.time() - docx_gen_start
+        print(f"📄 [DOCX-TOTAL] Total DOCX generation: {total_time*1000:.1f}ms")
+        print(f"📄 [DOCX-SIZE] Generated DOCX size: {buffer.getbuffer().nbytes} bytes")
+
+        buffer.close()
+        return response
+
     @staticmethod
     def generate_cover_letter_txt(profile_name, company_name, cover_letter_text):
         """
