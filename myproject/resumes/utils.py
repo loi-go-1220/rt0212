@@ -67,7 +67,7 @@ class PDFGenerator:
         }}
         
         h1 {{
-            color: #CA3832;
+            color: #000000;
             font-size: 20px;
             font-weight: bold;
             margin: 0 0 4px 0;
@@ -75,16 +75,16 @@ class PDFGenerator:
         }}
         
         h2 {{
-            color: #CA3832;
+            color: #000000;
             font-size: 15px;
             font-weight: bold;
             margin: 12px 0 8px 0;
             padding: 0 0 2px 0;
-            border-bottom: 1px solid #CA3832;
+            border-bottom: 1px solid #000000;
         }}
         
         h3 {{
-            color: #CA3832;
+            color: #000000;
             font-size: 13px;
             font-weight: bold;
             margin: 4px 0 6px 0;
