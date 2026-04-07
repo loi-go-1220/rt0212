@@ -65,3 +65,33 @@ class Resume(models.Model):
     def is_failed(self):
         """Check if resume generation failed"""
         return self.status == 'failed'
+
+
+class InterviewQuestionAnswer(models.Model):
+    """
+    Model for storing interview questions and AI-generated answers
+    """
+    # Relationships
+    resume = models.ForeignKey(
+        Resume, 
+        on_delete=models.CASCADE, 
+        related_name='interview_questions'
+    )
+    
+    # Content fields
+    question = models.TextField(help_text="Interview question asked by user")
+    answer = models.TextField(help_text="AI-generated answer to the question")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Interview Question & Answer"
+        verbose_name_plural = "Interview Questions & Answers"
+    
+    def __str__(self):
+        # Truncate question for display
+        question_preview = self.question[:50] + "..." if len(self.question) > 50 else self.question
+        return f"{self.resume.profile_name} - {question_preview}"

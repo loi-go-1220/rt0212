@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Resume
+from .models import Resume, InterviewQuestionAnswer
 
 
 @admin.register(Resume)
@@ -27,3 +27,34 @@ class ResumeAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at')
         }),
     )
+
+
+@admin.register(InterviewQuestionAnswer)
+class InterviewQuestionAnswerAdmin(admin.ModelAdmin):
+    list_display = ['get_resume_info', 'get_question_preview', 'created_at']
+    list_filter = ['created_at', 'resume__target_company', 'resume__user']
+    search_fields = ['question', 'answer', 'resume__profile_name', 'resume__target_company']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Resume Information', {
+            'fields': ('resume',)
+        }),
+        ('Question & Answer', {
+            'fields': ('question', 'answer')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def get_resume_info(self, obj):
+        return f"{obj.resume.profile_name} - {obj.resume.target_company}"
+    get_resume_info.short_description = 'Resume'
+    get_resume_info.admin_order_field = 'resume__profile_name'
+    
+    def get_question_preview(self, obj):
+        return obj.question[:100] + "..." if len(obj.question) > 100 else obj.question
+    get_question_preview.short_description = 'Question Preview'
+    get_question_preview.admin_order_field = 'question'

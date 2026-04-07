@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import Resume
+from .models import Resume, InterviewQuestionAnswer
 from .forms import ResumeBuilderForm, ResumeSearchForm
 from .services import ResumeAIService
 from .utils import PDFGenerator
@@ -272,12 +272,14 @@ def resume_detail(request, pk):
                     question=question
                 )
                 
-                # Store the question and answer in session
-                request.session[f'question_answer_{resume.id}'] = {
-                    'question': question,
-                    'answer': generated_answer
-                }
-                messages.success(request, 'Answer generated successfully!')
+                # Save the question and answer to database
+                InterviewQuestionAnswer.objects.create(
+                    resume=resume,
+                    question=question,
+                    answer=generated_answer
+                )
+                
+                messages.success(request, 'Answer generated and saved successfully!')
                 return redirect('resume_detail', pk=resume.id)
                 
             except Exception as e:
@@ -290,10 +292,17 @@ def resume_detail(request, pk):
     
     # Handle clearing question and answer
     if request.method == 'POST' and 'clear_answer' in request.POST:
-        session_key = f'question_answer_{resume.id}'
-        if session_key in request.session:
-            del request.session[session_key]
-        messages.info(request, 'Question and answer cleared.')
+        qa_id = request.POST.get('qa_id')
+        if qa_id:
+            try:
+                qa_item = InterviewQuestionAnswer.objects.get(
+                    id=qa_id, 
+                    resume=resume
+                )
+                qa_item.delete()
+                messages.info(request, 'Question and answer deleted.')
+            except InterviewQuestionAnswer.DoesNotExist:
+                messages.error(request, 'Question and answer not found.')
         return redirect('resume_detail', pk=resume.id)
     
     # Handle cover letter generation
@@ -320,11 +329,8 @@ def resume_detail(request, pk):
         else:
             messages.error(request, 'Resume must be completed before generating cover letter.')
     
-    # Get stored question and answer from session
-    session_key = f'question_answer_{resume.id}'
-    question_answer_data = request.session.get(session_key)
-    question_answer = question_answer_data['answer'] if question_answer_data else None
-    stored_question = question_answer_data['question'] if question_answer_data else None
+    # Get saved interview questions and answers from database
+    interview_qa_list = InterviewQuestionAnswer.objects.filter(resume=resume).order_by('-created_at')
     
     # Convert markdown text to HTML for display
     job_description_html = None
@@ -350,11 +356,10 @@ def resume_detail(request, pk):
             extensions=['fenced_code', 'tables', 'toc']
         )
     
-    # Convert question answer to HTML if it exists
-    question_answer_html = None
-    if question_answer:
-        question_answer_html = markdown.markdown(
-            html.unescape(question_answer),
+    # Convert interview Q&A answers to HTML
+    for qa_item in interview_qa_list:
+        qa_item.answer_html = markdown.markdown(
+            html.unescape(qa_item.answer),
             extensions=['fenced_code', 'tables', 'toc']
         )
     
@@ -363,8 +368,7 @@ def resume_detail(request, pk):
         'job_description_html': job_description_html,
         'initial_resume_html': initial_resume_html,
         'tailored_resume_html': tailored_resume_html,
-        'question_answer_html': question_answer_html,
-        'stored_question': stored_question,
+        'interview_qa_list': interview_qa_list,
     }
     
     return render(request, 'resumes/detail.html', context)
