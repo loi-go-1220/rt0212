@@ -1,5 +1,6 @@
 import os
 from openai import OpenAI
+from anthropic import Anthropic
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -8,16 +9,23 @@ load_dotenv()
 
 class ResumeAIService:
     """
-    Service for interacting with OpenAI API to tailor resumes
+    Service for interacting with AI APIs (OpenAI or Anthropic) to tailor resumes
     """
     
     def __init__(self):
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.model = os.getenv('OPENAI_MODEL', 'gpt-4o')  # Default to GPT-4o (latest and best)
+        # Determine which AI provider to use
+        self.provider = os.getenv('AI_PROVIDER', 'openai').lower()
+        
+        if self.provider == 'anthropic':
+            self.client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+            self.model = os.getenv('ANTHROPIC_MODEL', 'claude-sonnet-4')
+        else:
+            self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+            self.model = os.getenv('OPENAI_MODEL', 'gpt-4o')
     
     def tailor_resume(self, initial_resume, job_description, custom_prompt=None):
         """
-        Tailor a resume based on job description using OpenAI
+        Tailor a resume based on job description using AI (OpenAI or Anthropic)
         
         Args:
             initial_resume (str): The original resume text
@@ -43,43 +51,57 @@ Job Description:
 
 Please tailor this resume for the job description provided."""
             
-            # Prepare the messages
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content}
-            ]
-            
-            # Prepare API parameters
-            api_params = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": 0.7,
-            }
-            
-            # Use correct token parameter based on model
-            # Newer models (gpt-4.5+, o1, o3, etc.) use max_completion_tokens
-            # Older models (gpt-4, gpt-4o, gpt-3.5-turbo) use max_tokens
-            if any(x in self.model.lower() for x in ['gpt-4.5', 'gpt-5', 'o1', 'o3']):
-                api_params['max_completion_tokens'] = 4096
+            if self.provider == 'anthropic':
+                # Anthropic API call
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=4096,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_content}
+                    ],
+                    temperature=0.7
+                )
+                return response.content[0].text
             else:
-                api_params['max_tokens'] = 4096
-            
-            # Call OpenAI API
-            response = self.client.chat.completions.create(**api_params)
-            
-            # Extract the tailored resume
-            tailored_resume = response.choices[0].message.content
-            return tailored_resume
+                # OpenAI API call
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content}
+                ]
+                
+                api_params = {
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                }
+                
+                # Use correct token parameter based on model
+                if any(x in self.model.lower() for x in ['gpt-4.5', 'gpt-5', 'o1', 'o3']):
+                    api_params['max_completion_tokens'] = 4096
+                else:
+                    api_params['max_tokens'] = 4096
+                
+                response = self.client.chat.completions.create(**api_params)
+                return response.choices[0].message.content
             
         except Exception as e:
-            # Improve common OpenAI errors into user-friendly messages
+            # Handle API errors
             message = str(e)
             status_code = getattr(e, "status_code", None)
             if status_code is None:
-                response = getattr(e, "response", None)
-                status_code = getattr(response, "status_code", None)
+                response_obj = getattr(e, "response", None)
+                status_code = getattr(response_obj, "status_code", None)
 
-            # Region restriction (most common for new users)
+            # Anthropic-specific errors
+            if self.provider == 'anthropic':
+                if status_code in (401, 403):
+                    raise Exception(
+                        f"{self.provider.upper()} authentication failed. Please verify your `ANTHROPIC_API_KEY` in `.env` and restart the server."
+                    )
+                raise Exception(f"Anthropic API error: {message}")
+            
+            # OpenAI-specific errors
             if status_code == 403 and "unsupported_country_region_territory" in message:
                 raise Exception(
                     "OpenAI blocked this request because your country/region/territory is not supported. "
@@ -87,13 +109,12 @@ Please tailor this resume for the job description provided."""
                     "or use a different AI provider."
                 )
 
-            # Auth errors
             if status_code in (401, 403) and ("invalid_api_key" in message or "Incorrect API key" in message):
                 raise Exception(
                     "OpenAI authentication failed. Please verify your `OPENAI_API_KEY` in `.env` and restart the server."
                 )
 
-            raise Exception(f"OpenAI API error: {message}")
+            raise Exception(f"{self.provider.upper()} API error: {message}")
 
     def generate_question_answer(self, job_description, tailored_resume, question):
         """
@@ -126,37 +147,53 @@ Recruiter is asking:
 
 Please provide 1-2 sentences with casual, concise, oral tone (Make really important words bold and use line breaks)"""
 
-            # Prepare messages
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content}
-            ]
-
-            # Prepare API parameters
-            api_params = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": 0.7,
-            }
-            
-            # Use correct token parameter based on model
-            if any(x in self.model.lower() for x in ['gpt-4.5', 'gpt-5', 'o1', 'o3']):
-                api_params['max_completion_tokens'] = 200  # Shorter response for questions
+            if self.provider == 'anthropic':
+                # Anthropic API call
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=200,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_content}
+                    ],
+                    temperature=0.7
+                )
+                return response.content[0].text.strip()
             else:
-                api_params['max_tokens'] = 200
+                # OpenAI API call
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content}
+                ]
 
-            # Call OpenAI API
-            response = self.client.chat.completions.create(**api_params)
-            
-            return response.choices[0].message.content.strip()
+                api_params = {
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                }
+                
+                if any(x in self.model.lower() for x in ['gpt-4.5', 'gpt-5', 'o1', 'o3']):
+                    api_params['max_completion_tokens'] = 200
+                else:
+                    api_params['max_tokens'] = 200
+
+                response = self.client.chat.completions.create(**api_params)
+                return response.choices[0].message.content.strip()
 
         except Exception as e:
-            # Same error handling as tailor_resume method
+            # Handle API errors
             message = str(e)
             status_code = getattr(e, "status_code", None)
             if status_code is None:
-                response = getattr(e, "response", None)
-                status_code = getattr(response, "status_code", None)
+                response_obj = getattr(e, "response", None)
+                status_code = getattr(response_obj, "status_code", None)
+
+            if self.provider == 'anthropic':
+                if status_code in (401, 403):
+                    raise Exception(
+                        "Anthropic authentication failed. Please verify your `ANTHROPIC_API_KEY` in `.env` and restart the server."
+                    )
+                raise Exception(f"Anthropic API error: {message}")
 
             if status_code == 403 and "unsupported_country_region_territory" in message:
                 raise Exception(
@@ -170,7 +207,7 @@ Please provide 1-2 sentences with casual, concise, oral tone (Make really import
                     "OpenAI authentication failed. Please verify your `OPENAI_API_KEY` in `.env` and restart the server."
                 )
 
-            raise Exception(f"OpenAI API error: {message}")
+            raise Exception(f"{self.provider.upper()} API error: {message}")
     
     def _get_default_prompt(self):
         """
@@ -218,37 +255,53 @@ Company name: {company_name}
 
 Please provide 5-6 sentences with casual, concise, oral tone (Make really important words bold and use line breaks)"""
 
-            # Prepare messages
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content}
-            ]
-
-            # Prepare API parameters
-            api_params = {
-                "model": self.model,
-                "messages": messages,
-                "temperature": 0.7,
-            }
-            
-            # Use correct token parameter based on model
-            if any(x in self.model.lower() for x in ['gpt-4.5', 'gpt-5', 'o1', 'o3']):
-                api_params['max_completion_tokens'] = 300  # Slightly longer for cover letters
+            if self.provider == 'anthropic':
+                # Anthropic API call
+                response = self.client.messages.create(
+                    model=self.model,
+                    max_tokens=300,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": user_content}
+                    ],
+                    temperature=0.7
+                )
+                return response.content[0].text.strip()
             else:
-                api_params['max_tokens'] = 300
+                # OpenAI API call
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_content}
+                ]
 
-            # Call OpenAI API
-            response = self.client.chat.completions.create(**api_params)
-            
-            return response.choices[0].message.content.strip()
+                api_params = {
+                    "model": self.model,
+                    "messages": messages,
+                    "temperature": 0.7,
+                }
+                
+                if any(x in self.model.lower() for x in ['gpt-4.5', 'gpt-5', 'o1', 'o3']):
+                    api_params['max_completion_tokens'] = 300
+                else:
+                    api_params['max_tokens'] = 300
+
+                response = self.client.chat.completions.create(**api_params)
+                return response.choices[0].message.content.strip()
 
         except Exception as e:
-            # Same error handling as other methods
+            # Handle API errors
             message = str(e)
             status_code = getattr(e, "status_code", None)
             if status_code is None:
-                response = getattr(e, "response", None)
-                status_code = getattr(response, "status_code", None)
+                response_obj = getattr(e, "response", None)
+                status_code = getattr(response_obj, "status_code", None)
+
+            if self.provider == 'anthropic':
+                if status_code in (401, 403):
+                    raise Exception(
+                        "Anthropic authentication failed. Please verify your `ANTHROPIC_API_KEY` in `.env` and restart the server."
+                    )
+                raise Exception(f"Anthropic API error: {message}")
 
             if status_code == 403 and "unsupported_country_region_territory" in message:
                 raise Exception(
@@ -262,4 +315,4 @@ Please provide 5-6 sentences with casual, concise, oral tone (Make really import
                     "OpenAI authentication failed. Please verify your `OPENAI_API_KEY` in `.env` and restart the server."
                 )
 
-            raise Exception(f"OpenAI API error: {message}")
+            raise Exception(f"{self.provider.upper()} API error: {message}")
