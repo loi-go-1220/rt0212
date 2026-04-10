@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load resume_extras %}
 
 {% block title %}Resume Detail - {{ resume.target_company }} - Resume Tailoring System{% endblock %}
 
@@ -208,8 +209,14 @@
 
         <!-- Job Description -->
         <div class="card shadow mb-4">
-            <div class="card-header bg-info text-white">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Job Description</h5>
+                <button type="button" class="btn btn-sm btn-light copy-markdown-btn"
+                        data-content="{{ resume.job_description|escape }}" 
+                        data-section="Job Description"
+                        aria-label="Copy job description as markdown">
+                    <i class="bi bi-clipboard"></i> Copy MD
+                </button>
             </div>
             <div class="card-body">
                 <div class="resume-preview">
@@ -233,8 +240,14 @@
         <!-- Tailored Resume -->
         {% if resume.is_completed %}
         <div class="card shadow mb-4">
-            <div class="card-header bg-success text-white">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-file-earmark-check"></i> Tailored Resume</h5>
+                <button type="button" class="btn btn-sm btn-light copy-markdown-btn"
+                        data-content="{{ resume.tailored_resume_text|escape }}" 
+                        data-section="Tailored Resume"
+                        aria-label="Copy tailored resume as markdown">
+                    <i class="bi bi-clipboard"></i> Copy MD
+                </button>
             </div>
             <div class="card-body">
                 <div class="resume-preview">
@@ -265,7 +278,7 @@
                 <form method="POST" class="d-grid gap-2 mb-2" id="downloadForm">
                     {% csrf_token %}
                     <button type="submit" name="download" class="btn btn-primary" id="downloadButton">
-                        <i class="bi bi-download"></i> Download PDF
+                        <i class="bi bi-download"></i> Download DOCX
                     </button>
                 </form>
                 
@@ -284,7 +297,7 @@
                 </form>
                 <hr>
                 <p class="small text-muted mb-0">
-                    <i class="bi bi-info-circle"></i> <strong>Download PDF:</strong> Generates a professionally formatted PDF from the existing text.<br>
+                    <i class="bi bi-info-circle"></i> <strong>Download DOCX:</strong> Generates a professionally formatted DOCX from the existing text.<br>
                     <i class="bi bi-info-circle"></i> <strong>Regenerate:</strong> Calls OpenAI again to create a new version.
                 </p>
                 {% elif resume.is_failed %}
@@ -351,7 +364,7 @@
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <strong>Answer:</strong>
                                             <button type="button" class="btn btn-sm btn-outline-secondary copy-answer-btn"
-                                                    data-answer="{{ qa_item.answer|escape }}" aria-label="Copy answer to clipboard">
+                                                    data-answer="{{ qa_item.answer|markdown_to_plain_text|escape }}" aria-label="Copy answer to clipboard">
                                                 <i class="bi bi-clipboard"></i> Copy
                                             </button>
                                         </div>
@@ -411,12 +424,12 @@
         downloadForm.addEventListener('submit', function() {
             const button = document.getElementById('downloadButton');
             if (button) {
-                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating PDF...';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating DOCX...';
                 button.disabled = true;
                 
-                // Reset after 5 seconds (PDF generation from existing text is fast)
+                // Reset after 5 seconds (DOCX generation from existing text is fast)
                 setTimeout(function() {
-                    button.innerHTML = '<i class="bi bi-download"></i> Download PDF';
+                    button.innerHTML = '<i class="bi bi-download"></i> Download DOCX';
                     button.disabled = false;
                 }, 5000);
             }
@@ -488,7 +501,7 @@
         }
     }
 
-    // Handle copy functionality for multiple answers
+    // Handle copy functionality for interview question answers (plain text)
     const copyAnswerBtns = document.querySelectorAll('.copy-answer-btn');
     copyAnswerBtns.forEach(function(btn) {
         btn.addEventListener('click', async function() {
@@ -502,6 +515,31 @@
                 btn.innerHTML = '<i class="bi bi-check2"></i> Copied';
             } catch (e) {
                 btn.innerHTML = '<i class="bi bi-x-circle"></i> Failed';
+            } finally {
+                setTimeout(function() {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                }, 1500);
+            }
+        });
+    });
+
+    // Handle copy functionality for markdown content (job description & tailored resume)
+    const copyMarkdownBtns = document.querySelectorAll('.copy-markdown-btn');
+    copyMarkdownBtns.forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            const contentToCopy = btn.getAttribute('data-content');
+            const sectionName = btn.getAttribute('data-section') || 'Content';
+            if (!contentToCopy) return;
+
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            try {
+                await copyTextToClipboard(contentToCopy);
+                btn.innerHTML = '<i class="bi bi-check2"></i> Copied';
+            } catch (e) {
+                btn.innerHTML = '<i class="bi bi-x-circle"></i> Failed';
+                console.error('Failed to copy ' + sectionName + ':', e);
             } finally {
                 setTimeout(function() {
                     btn.innerHTML = originalHtml;

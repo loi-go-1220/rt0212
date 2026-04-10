@@ -2,7 +2,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
+from django.db.models.functions import TruncDate
+from collections import OrderedDict
 from .models import Resume, InterviewQuestionAnswer
 from .forms import ResumeBuilderForm, ResumeSearchForm
 from .services import ResumeAIService
@@ -146,8 +148,30 @@ def dashboard(request):
 @login_required
 def resume_history(request):
     """
-    Resume history list view with search and filtering
+    Resume history list view with search and filtering, grouped by date
     """
+    # Handle DOCX download from history page
+    if request.method == 'POST' and 'download' in request.POST:
+        resume_id = request.POST.get('resume_id')
+        if resume_id:
+            try:
+                resume = get_object_or_404(Resume, pk=resume_id, user=request.user)
+                if resume.status == 'completed' and resume.tailored_resume_text:
+                    print(f"📥 [HISTORY-DOWNLOAD] Starting DOCX download for resume ID: {resume.id}")
+                    from .utils import PDFGenerator
+                    response = PDFGenerator.generate_resume_docx(
+                        profile_name=resume.profile_name,
+                        company_name=resume.target_company,
+                        job_title=resume.job_title or 'Position',
+                        tailored_resume_text=resume.tailored_resume_text
+                    )
+                    return response
+                else:
+                    messages.error(request, 'Resume is not ready for download.')
+            except Exception as e:
+                print(f"❌ [HISTORY-DOWNLOAD] Download failed: {str(e)}")
+                messages.error(request, f'Failed to download resume: {str(e)}')
+    
     # Get all user's resumes
     resumes = Resume.objects.filter(user=request.user)
     
@@ -167,15 +191,30 @@ def resume_history(request):
         if status_filter:
             resumes = resumes.filter(status=status_filter)
     
-    # Pagination
-    paginator = Paginator(resumes, 10)  # 10 resumes per page
+    # Pagination with 100 resumes per page
+    paginator = Paginator(resumes, 100)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    
+    # Group resumes by date
+    resumes_by_date = OrderedDict()
+    for resume in page_obj:
+        date_key = resume.created_at.date()
+        if date_key not in resumes_by_date:
+            resumes_by_date[date_key] = []
+        resumes_by_date[date_key].append(resume)
+    
+    # Get date counts for the current page
+    date_counts = {}
+    for date_key, resume_list in resumes_by_date.items():
+        date_counts[date_key] = len(resume_list)
     
     context = {
         'page_obj': page_obj,
         'search_form': search_form,
         'total_count': resumes.count(),
+        'resumes_by_date': resumes_by_date,
+        'date_counts': date_counts,
     }
     
     return render(request, 'resumes/history.html', context)
